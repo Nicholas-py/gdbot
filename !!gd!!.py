@@ -23,7 +23,7 @@ ag.moveTo(1230,600)
 def getpercent(display=False):
 
     sct = mss()
-    sct_params = {'top': 40, 'left': 1647, 'width': 140, 'height': 30}
+    sct_params = {'top': 40, 'left': 1647, 'width': 180, 'height': 35}
     arr = np.asarray((sct.grab(sct_params)))
     if display:
         plt.imshow(arr)
@@ -138,10 +138,18 @@ def execute(delays, startpoint = 0):
             print('R1delay:',r1delay)
         errors.append(log(max(0.00001,delay)))
         if delay > 0.005:
-            print(s+'. delay1',t1,'delay2',t2,' delay:',round(delay,5),'on',i)
+            print(s+'. delay1',round(t1,3),'delay2',round(t2,4),' delay:',round(delay,5),'on',i)
         cmdlength = None
     print('Finished!')
     sleep(1)
+    p = stablepercent()
+    print('Percent = ',p)
+    sleep(2)
+    p2 = stablepercent()        
+    print('(acquired in',time()-starttime,'seconds)')
+    return p, p2
+
+def stablepercent():
     p = 0
     count = 0
     while not isreasonable(p):
@@ -156,13 +164,7 @@ def execute(delays, startpoint = 0):
             print('\n\nGLITCH\n\n')
             #getpercent(True)
             break
-    print('Percent = ',p)
-    sleep(2)        
-    print('(acquired in',time()-starttime,'seconds)')
-    try:
-        return p
-    except:
-        return 0
+    return p
 
 def isreasonable(value):
     return value > 10 and value < 100*100+100
@@ -178,7 +180,7 @@ def save(delays, lvlname):
             lines[i] = lines[i].split(sep)[0]+sep + str(gindex)+sep+str(startdelay)
     if not gindex:
         gindex = 1
-        lines.append(lvlname+' 1 '+str(gindex))
+        lines.append(lvlname+sep+'1'+sep+str(gindex))
     file.close()
     
     fname = lvlname+str(gindex-1)+'.txt'
@@ -221,14 +223,8 @@ def logbest(score):
     file.close()
 
 def addrand(delaylist):
-    cmded = False
-    if random.randint(0,2) == 1:
-        delaylist.append(random.choice(cmds[0:2]))
-        cmded = True
-    if cmded:
-        chg = round(abs(random.gauss(0,0.6)),2)
-    else:
-        chg = round(abs(random.gauss(0,1)),2)
+    delaylist.append(random.choice(cmds[2:]))
+    chg = round(abs(random.gauss(0,0.8)),2)
     if len(delaylist) > 0:
         if delaylist[-1] in cmds:
             if len(delaylist) > 1:
@@ -280,12 +276,23 @@ def mutate(delaylist):
     for i in range(len(toremove)):
         delaylist.pop(toremove[i]-i)
 
-        
+def isfirstargbetter(score1, cmds1, score2, cmds2):
+    if abs(score1[1] - score2[1] > 1000):
+        return False
+    if abs(score1[1] - score2[1]) > 5:
+        return score1[1] > score2[1]
+    elif abs(score1[0] - score2[0]) > 5:
+        return score1[0] > score2[0]
+    else:
+        print('Tiebreak - last arg',cmds1[-1] < cmds2[-1])
+        return cmds1[-1] < cmds2[-1]
+
+
 def getscore(time, cmds):
     if cmds == []:
         score = time
     else:
-        score = time-7*cmds[-1]
+        score = time[0]-7*cmds[-1]
         if cmds[-1] > time * 1.5:
             score -= 3
     return score
@@ -297,9 +304,9 @@ def checkinconsistency(delays, highscore = None):
     if highscore:
         score1 = highscore
     else:
-        score1 = execute(delays)
-    score2 = execute(delays)
-    score3 = execute(delays)
+        score1 = execute(delays)[1]
+    score2 = execute(delays)[1]
+    score3 = execute(delays)[1]
     mini = min(score1,score2,score3)
     maxi = max(score1,score2,score3)
     if maxi - mini > 10:
@@ -321,7 +328,7 @@ def findcommandfor(delays, point):
     guessmax = len(delays)-1
     while True:
         reducedelays = delays[0:guess]
-        result = execute(reducedelays)
+        result = execute(reducedelays)[0]
         print('commands up to',guess,'resulted in', result)
         if result > point - 5:
             #guess too high
@@ -418,65 +425,49 @@ def runbatches(prevbest):
 
 def runcont(prevbest):
     bestp = execute(prevbest)
-    bestscore = getscore(bestp, prevbest)
-    print('Score to beat:', bestscore)
+    #bestscore = getscore(bestp, prevbest)
+    print('Score to beat:', bestp)
     counter = 0
     while True:
-        scoreboost = 0
         counter += 1
-        if counter % 120 == 100:
-            print('Fixing inconsistencies...')
-            current = fixinconsistentcommand(prevbest, bestp)
-            scoreboost = 10
-            if not current:
-                current = prevbest.copy()
-                mutate(current)
-                scoreboost = 0
-        else: 
-            current = prevbest.copy()
-            mutate(current)
+        current = prevbest.copy()
+        mutate(current)
+
         if current == prevbest:
             continue
+
         p = execute(current)
-        if len(str(p)) > len(str(bestp)) and str(p)[0] == str(bestp)[0] and '1' in str(p):
-            p = int(str(p)[0] + str(p)[2:]  )   
-        results.append(p)       
-        score = getscore(p, current) + scoreboost
-        print('Score:',score)
-        if score > bestscore+1 and score < bestscore + 1000:
+        results.append(p[0])       
+        #score = getscore(p, current)
+        print('Score:',p)
+
+        if isfirstargbetter(p, current, bestp, prevbest):
             print('May be higher, rematching...\n')
             score2 = execute(current)
             bestp = execute(prevbest)
-            if getscore(score2, current) + scoreboost > getscore(bestp, prevbest):
+
+            if isfirstargbetter(score2, current, bestp, prevbest):
                 print('\n NEW BEST!!!\n')
-                logbest(score2/100)
-                prevbest= current
-                if abs(score2 - bestp) < abs(score - bestp):
-                    bestscore = score2
+                logbest(score2[1]/100)
+                prevbest = current
+                if abs(score2[1] - bestp[1]) < abs(p[1] - bestp[1]):
+                    bestp = score2
                 else:
-                    prevbest = current
-                bestscore = score
+                    bestp = p
                 save(current, level)
 
 level = input('Which level?').lower().strip()
-
 try:
     prevbest = load(level)
 except FileNotFoundError:
     print('No file found')
     prevbest = []
-#print(fixinconsistentcommand(prevbest[0:30], 1492))
-#plt.hist(errors)
-#plt.show()
-#print('\n\n',findcommandfor(prevbest,1477),'\n\n')
-#execute(prevbest)
-#quit()
-
 try:
     runcont(prevbest)
 except:
     plt.hist(errors)
     plt.show()
-    plt.hist(results,bins=int(max(results)/100))
+    plt.hist(results,bins=100)
     plt.show()
+    raise Exception('EXITING')
 
