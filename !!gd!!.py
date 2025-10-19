@@ -34,7 +34,8 @@ def getpercent(display=False):
 ag.PAUSE = 0.0
 print('Loaded')
 
-cmds = ['h','s', 'ss','sh','ms','mh','ls','lh']
+cmds = ['h','s','ms','ls', 'ss','sh','mh','xh','lh']
+cmdsinuse = cmds[4:]
 
 p = psutil.Process(os.getpid())
 p.nice(psutil.REALTIME_PRIORITY_CLASS)
@@ -91,6 +92,8 @@ def execute(delays, startpoint = 0):
                 cmdlength = 0.1
             elif i[0] == 'l':
                 cmdlength = 0.5
+            elif i[0] == 'x':
+                cmdlength = 0.2
             if  i[-1] == 's':
                 spamming = True
             elif  i[-1] == 'h':
@@ -126,10 +129,8 @@ def execute(delays, startpoint = 0):
         elif holding:
             s = 'holding'
             ag.mouseUp()
-            holding = False
         elif spamming:
             s = 'spamming'
-            spamming = False
         else:
             raise Exception("Improper state. No idea how you managed to do that.")
         delay = time()-starttime-i-r1delay
@@ -140,6 +141,8 @@ def execute(delays, startpoint = 0):
         if delay > 0.005:
             print(s+'. delay1',round(t1,3),'delay2',round(t2,4),' delay:',round(delay,5),'on',i)
         cmdlength = None
+        spamming = False
+        holding = False
     print('Finished!')
     sleep(1)
     p = stablepercent()
@@ -223,7 +226,7 @@ def logbest(score):
     file.close()
 
 def addrand(delaylist):
-    delaylist.append(random.choice(cmds[2:]))
+    delaylist.append(random.choice(cmdsinuse[2:]))
     chg = round(abs(random.gauss(0,0.8)),2)
     if len(delaylist) > 0:
         if delaylist[-1] in cmds:
@@ -242,6 +245,8 @@ def mutate(delaylist):
     dchance = 0
     if random.randint(0,1) != 0:
         addrand(delaylist)    
+        if random.randint(0,3) == 0:
+            addrand(delaylist)
     else:
         dchance += 1
     for i in range(len(delaylist)):
@@ -455,6 +460,8 @@ def runcont(prevbest):
                 else:
                     bestp = p
                 save(current, level)
+
+#execute(['ss',1,'mh',2,'ms',3,'lh',4,'ls',5])
 
 level = input('Which level?').lower().strip()
 try:
