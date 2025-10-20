@@ -91,7 +91,7 @@ def execute(delays, startpoint = 0):
             elif i[0] == 'm':
                 cmdlength = 0.1
             elif i[0] == 'l':
-                cmdlength = 0.5
+                cmdlength = 0.3
             elif i[0] == 'x':
                 cmdlength = 0.2
             if  i[-1] == 's':
@@ -148,7 +148,8 @@ def execute(delays, startpoint = 0):
     p = stablepercent()
     print('Percent = ',p)
     sleep(2)
-    p2 = stablepercent()        
+    p2 = stablepercent()    
+    results.append(p2)       
     print('(acquired in',time()-starttime,'seconds)')
     return p, p2
 
@@ -442,7 +443,6 @@ def runcont(prevbest):
             continue
 
         p = execute(current)
-        results.append(p[0])       
         #score = getscore(p, current)
         print('Score:',p)
 
@@ -461,7 +461,20 @@ def runcont(prevbest):
                     bestp = p
                 save(current, level)
 
+#execute([ 'h', 11.84, 'mh', 12.28, 'xh', 12.37, 'lh', 13.13, 'xh', 13.15])
+
 #execute(['ss',1,'mh',2,'ms',3,'lh',4,'ls',5])
+execute([2.32, 2.34, 3.07, 's', 3.25, 'h', 3.75, 4.26, 's', 4.81, 5.11, 5.17, 's', 5.38, 5.98, 6.7, 's', 8.1, 'h', 8.51, 9.22, 's', 
+       9.71, 10.29, 10.98, 's', 11.55, 's', 11.86, 12.26, 12.34, 13.21, 'h', 13.62, 14.4, 's', 15.3, 's', 15.72, 16.46, 17.13, 17.95,
+         'h', 18.59, 19.28, 20.33, 's', 20.88, 'h', 21.32, 21.39, 'h', 21.54, 's', 22.04,
+         's', 22.27, 's', 23.38, 24.12, 24.64, 25.7, 's', 26.23, 'h', 27.3, 28.05, 29.31, 30.28, 31.3, 
+         31.89, 32.51, 's', 33.34, 33.73, 34.48, 'h', 35.15, 35.77, 'h', 36.66, 36.97, 's', 37.32, 
+         38.07, 'h', 38.63, 38.89, 39.6, 'h', 40.69, 41.41, 's', 42.91, 's', 43.82, 's', 44.38,'h', 45.13,
+         45.28, 46.0, 46.86,90, 47.62, 48.1, 49.14, 's', 49.77, 50.88, 'h', 51.3, 51.6,
+          'h', 51.9, 52.1, 'h', 52.42, 'h', 53.0, 53.39, 's', 53.95, 54.44, 'h', 54.95, 's', 55.71, 56.26,
+      'h', 56.73, 'h', 57.88, 'h', 58.39,
+   's', 59.85, 's', 60.95, 's', 61.17, 61.45, 'h', 61.84, 'mh', 62.28, 'xh', 62.37, 'xh', 63.1, 'xh', 63.15])#, 'dry out')
+
 
 level = input('Which level?').lower().strip()
 try:
@@ -469,6 +482,10 @@ try:
 except FileNotFoundError:
     print('No file found')
     prevbest = []
+
+#while True:
+ #   execute(prevbest)
+
 try:
     runcont(prevbest)
 except:
