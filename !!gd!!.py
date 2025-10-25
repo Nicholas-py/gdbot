@@ -91,7 +91,7 @@ def execute(delays, startpoint = 0):
             elif i[0] == 'm':
                 cmdlength = 0.1
             elif i[0] == 'l':
-                cmdlength = 0.3
+                cmdlength = 0.29
             elif i[0] == 'x':
                 cmdlength = 0.2
             if  i[-1] == 's':
@@ -133,7 +133,7 @@ def execute(delays, startpoint = 0):
             s = 'spamming'
         else:
             raise Exception("Improper state. No idea how you managed to do that.")
-        
+        ag.moveTo(1230,400)
         delay = time()-starttime-i-r1delay
         if cmdlength:
             delay -= cmdlength
@@ -236,12 +236,16 @@ def load(lvlname):
     return oplist
 
 def logbest(score):
-    file = open('$$LOGS$$.txt','a+')
-    time = str(datetime.now())
     filenum = getnumber(level)
-    string = time + ': '+str(score)  + f'% ({filenum})\n'
-    file.write(string)
+    string = str(score)  + f'% ({filenum})'
+    logtofile(string)
+
+def logtofile(string):
+    print(string)
+    file = open('$$LOGS$$.txt','a+')
+    file.write(str(datetime.now())+ ": "+string + '\n')
     file.close()
+
 
 def addrand(delaylist):
     delaylist.append(random.choice(cmdsinuse[2:]))
@@ -261,9 +265,10 @@ def addrand(delaylist):
 
 def mutate(delaylist):
     dchance = 0
-    if random.randint(0,1) != 0:
+    if random.randint(0,1) == 0:
+        print('adding')
         addrand(delaylist)    
-        if random.randint(0,3) == 0:
+        if random.randint(0,15) == 0:
             addrand(delaylist)
     else:
         dchance += 1
@@ -299,14 +304,21 @@ def mutate(delaylist):
     for i in range(len(toremove)):
         delaylist.pop(toremove[i]-i)
 
+
+
 def isfirstargbetter(score1, cmds1, score2, cmds2):
     if abs(score1[1] - score2[1] > 1000):
+        
         return False
     if abs(score1[1] - score2[1]) > 5:
         return score1[1] > score2[1]
     elif abs(score1[0] - score2[0]) > 5:
         return score1[0] > score2[0]
     else:
+        if not cmds1:
+            return False
+        if not cmds2:
+            return True
         print('Tiebreak - last arg',cmds1[-1] < cmds2[-1])
         return cmds1[-1] < cmds2[-1]
 
@@ -466,18 +478,31 @@ def runcont(prevbest):
         if isfirstargbetter(p, current, bestp, prevbest):
             print('May be higher, rematching...\n')
             score2 = execute(current)
-
-            print(score2, 'new, vs',bestp,'old')
+            
+            logtofile(str(score2)+ ' new, vs '+str(bestp)+' old')
 
             if isfirstargbetter(score2, current, bestp, prevbest):
                 print('\n NEW BEST!!!\n')
                 logbest(score2[1]/100)
                 prevbest = current
-                if abs(score2[1] - bestp[1]) < abs(p[1] - bestp[1]):
-                    bestp = score2
-                else:
-                    bestp = p
-                save(current, level)
+                bestp = max(p,score2)
+
+                print('testing neighbours...')
+                minversion = prevbest.copy()
+                minversion[-1] -= 0.03
+                maxversion = prevbest.copy()
+                maxversion[-1] += 0.03
+                minscore = execute(minversion)
+                maxscore = execute(maxversion)
+                bools =  (minscore[1]+10 < bestp[1], maxscore[1]+10 <bestp[1])
+                if bools[0] and not bools[1]:
+                    prevbest = maxversion
+                    logtofile(f'Minimizing adjustment ({minscore})')
+                elif bools[1] and not bools[0]:
+                    prevbest = minversion
+                    logtofile(f'Maximizing adjustment ({minscore})')
+                print('Saved!!!')
+                save(prevbest, level)
 
 #execute([ 'h', 11.84, 'mh', 12.28, 'xh', 12.37, 'lh', 13.13, 'xh', 13.15])
 
